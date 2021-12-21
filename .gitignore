@@ -8,6 +8,10 @@
 # testing
 /coverage
 
+# next.js
+/.next/
+/out/
+
 # production
 /build
 
@@ -27,4 +31,6 @@ yarn-error.log*
 node_modules
 .env
 
-.nvmrc
+/.nvmrc
+
+/.vscode
