@@ -4,6 +4,9 @@ import { Flex, Box, Heading, Button, Text } from "@chakra-ui/react";
 import "regenerator-runtime/runtime";
 import { ThirdwebSDK } from "@3rdweb/sdk";
 import { useWeb3 } from "@3rdweb/hooks";
+import { ethers } from "ethers";
+import MemberTable from "./MemberTable";
+import Voting from "./Voting";
 
 // We instatiate the sdk on Rinkeby.
 const sdk = new ThirdwebSDK("rinkeby");
@@ -12,6 +15,15 @@ const sdk = new ThirdwebSDK("rinkeby");
 const bundleDropModule = sdk.getBundleDropModule(
   "0x98Aaf21aEE124CBff65e8fFc84a1d474CdDdB9Aa"
 );
+
+const tokenModule = sdk.getTokenModule(
+  "0xb1e570a274FCE997Ca6C6400cd3845883DaD51b3"
+);
+
+const voteModule = sdk.getVoteModule(
+  "0x5aF8846A5691B4F67dd5615Dcf9375e381788dEb"
+);
+
 function Landing() {
   // Use the connectWallet hook thirdweb gives us.
   const { connectWallet, address, error, provider } = useWeb3();
@@ -24,6 +36,63 @@ function Landing() {
   const [hasClaimedNFT, setHasClaimedNFT] = useState(false);
   // isClaiming lets us easily keep a loading state while the NFT is minting.
   const [isClaiming, setIsClaiming] = useState(false);
+
+  // Holds the amount of token each member has in state.
+  const [memberTokenAmounts, setMemberTokenAmounts] = useState({});
+  // The array holding all of our members addresses.
+  const [memberAddresses, setMemberAddresses] = useState([]);
+
+  // This useEffect grabs all our the addresses of our members holding our NFT.
+  useEffect(() => {
+    if (!hasClaimedNFT) {
+      return;
+    }
+
+    // Just like we did in the 7-airdrop-token.js file! Grab the users who hold our NFT
+    // with tokenId 0.
+    bundleDropModule
+      .getAllClaimerAddresses("0")
+      .then((addresess) => {
+        console.log("🚀 Members addresses", addresess);
+        setMemberAddresses(addresess);
+      })
+      .catch((err) => {
+        console.error("failed to get member list", err);
+      });
+  }, [hasClaimedNFT]);
+
+  // This useEffect grabs the # of token each member holds.
+  useEffect(() => {
+    if (!hasClaimedNFT) {
+      return;
+    }
+
+    // Grab all the balances.
+    tokenModule
+      .getAllHolderBalances()
+      .then((amounts) => {
+        console.log("👜 Amounts", amounts);
+        setMemberTokenAmounts(amounts);
+      })
+      .catch((err) => {
+        console.error("failed to get token amounts", err);
+      });
+  }, [hasClaimedNFT]);
+
+  // Now, we combine the memberAddresses and memberTokenAmounts into a single array
+  const memberList = useMemo(() => {
+    return memberAddresses.map((address) => {
+      return {
+        address,
+        tokenAmount: ethers.utils.formatUnits(
+          // If the address isn't in memberTokenAmounts, it means they don't
+          // hold any of our token.
+          memberTokenAmounts[address] || 0,
+          18
+        ),
+      };
+    });
+  }, [memberAddresses, memberTokenAmounts]);
 
   // Another useEffect!
   useEffect(() => {
@@ -76,7 +145,20 @@ function Landing() {
       <Flex flexDir={"column"} alignItems={"center"} justifyContent={"center"}>
         <Heading> 🍕 pizzaDAO member page</Heading>
 
-        <Text>congrats on owning a slice</Text>
+        <Text mb={2}>congrats on owning a slice</Text>
+        <Flex
+          flexDir={"row"}
+          w="80%"
+          justifyContent={"space-evenly"}
+          alignItems={"center"}
+        >
+          <MemberTable memberList={memberList} />
+          <Voting
+            voteModule={voteModule}
+            address={address}
+            hasClaimedNFT={hasClaimedNFT}
+          />
+        </Flex>
       </Flex>
     );
   }
