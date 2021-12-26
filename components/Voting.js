@@ -65,7 +65,10 @@ function Voting({ voteModule, address, hasClaimedNFT }) {
       .hasVoted(proposals[0].proposalId, address)
       .then((hasVoted) => {
         setHasVoted(hasVoted);
-        console.log("🥵 User has already voted");
+
+        if (hasVoted) {
+          console.log("🥵 User has already voted");
+        }
       })
       .catch((err) => {
         console.error("failed to check if wallet has voted", err);
@@ -73,16 +76,6 @@ function Voting({ voteModule, address, hasClaimedNFT }) {
   }, [hasClaimedNFT, proposals, address]);
 
   const onSubmit = async (data) => {
-    // console.log(
-    //   data[
-    //     "38146937464903397563810543328350910802305815251522897033180913441085960757333"
-    //   ]
-    // );
-
-    // data.map((x) => {
-    //   console.log(x);
-    // });
-    let xx = [];
     const votes = proposals.map((proposal) => {
       let voteResult = {
         proposalId: proposal.proposalId,
@@ -92,7 +85,6 @@ function Voting({ voteModule, address, hasClaimedNFT }) {
 
       voteResult.vote = data[proposal.proposalId];
       console.log(data[proposal.proposalId]);
-      //   xx.push(data[proposal.proposalId]);
       return voteResult;
     });
 
@@ -104,6 +96,7 @@ function Voting({ voteModule, address, hasClaimedNFT }) {
     // first we need to make sure the user delegates their token to vote
     try {
       //we'll check if the wallet still needs to delegate their tokens before they can vote
+      console.log(tokenModule.getDelegationOf(address));
       const delegation = await tokenModule.getDelegationOf(address);
       // if the delegation is the 0x0 address that means they have not delegated their governance tokens yet
       if (delegation === ethers.constants.AddressZero) {
@@ -179,7 +172,7 @@ function Voting({ voteModule, address, hasClaimedNFT }) {
                       id={proposal.proposalId + "-" + vote.type}
                       name={proposal.proposalId}
                       colorScheme="orange"
-                      value={vote.label}
+                      value={vote.type}
                       {...register(`${proposal.proposalId}`)}
                     >
                       {vote.label}
